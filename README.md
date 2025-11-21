@@ -199,7 +199,7 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 ## 👤 Autor
 
 **Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/tu-usuario)
+- GitHub: [@SAnino25](https://github.com/SAnino25)
 
 ## 📚 Recursos Adicionales
 
@@ -210,4 +210,4 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más det
 
 ---
 
-⭐ Si te ha gustado este proyecto, ¡dale una estrella en GitHub!# task-manager-docker
+⭐ Si te ha gustado este proyecto, ¡dale una estrella en GitHub!
