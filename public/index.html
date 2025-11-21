@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - Docker App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .task-form {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        .tasks-list {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .task-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .task-item.completed {
+            opacity: 0.6;
+            border-left-color: #28a745;
+        }
+
+        .task-content {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .task-description {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-complete,
+        .btn-delete {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-complete {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-complete:hover,
+        .btn-delete:hover {
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐳 Task Manager Docker</h1>
+            <p>Aplicación multicontenedor: Node.js + MongoDB</p>
+            <span id="dbStatus" class="status">Verificando conexión...</span>
+        </div>
+
+        <div class="task-form">
+            <h2 style="margin-bottom: 20px; color: #333;">➕ Nueva Tarea</h2>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label for="title">Título *</label>
+                    <input type="text" id="title" name="title" required placeholder="Ej: Completar práctica de Docker">
+                </div>
+                <div class="form-group">
+                    <label for="description">Descripción</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Descripción opcional de la tarea"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Agregar Tarea</button>
+            </form>
+        </div>
+
+        <div class="tasks-list">
+            <h2 style="margin-bottom: 20px; color: #333;">📋 Mis Tareas</h2>
+            <div id="tasksList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/tasks';
+
+        // Verificar conexión con la base de datos
+        async function checkDbConnection() {
+            try {
+                const response = await fetch(API_URL);
+                const statusEl = document.getElementById('dbStatus');
+                if (response.ok) {
+                    statusEl.textContent = '✅ Conectado a MongoDB';
+                    statusEl.className = 'status connected';
+                } else {
+                    statusEl.textContent = '❌ Error de conexión';
+                    statusEl.className = 'status disconnected';
+                }
+            } catch (error) {
+                const statusEl = document.getElementById('dbStatus');
+                statusEl.textContent = '❌ Sin conexión';
+                statusEl.className = 'status disconnected';
+            }
+        }
+
+        // Cargar tareas
+        async function loadTasks() {
+            try {
+                const response = await fetch(API_URL);
+                const tasks = await response.json();
+                displayTasks(tasks);
+            } catch (error) {
+                console.error('Error cargando tareas:', error);
+            }
+        }
+
+        // Mostrar tareas
+        function displayTasks(tasks) {
+            const tasksList = document.getElementById('tasksList');
+            
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<div class="empty-state">📭 No hay tareas. ¡Agrega una nueva!</div>';
+                return;
+            }
+
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-item ${task.completed ? 'completed' : ''}">
+                    <div class="task-content">
+                        <div class="task-title">${task.completed ? '✅' : '⭕'} ${task.title}</div>
+                        ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+                    </div>
+                    <div class="task-actions">
+                        ${!task.completed ? `<button class="btn-complete" onclick="toggleTask('${task._id}', true)">✓</button>` : ''}
+                        <button class="btn-delete" onclick="deleteTask('${task._id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Agregar tarea
+        document.getElementById('taskForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title, description })
+                });
+
+                if (response.ok) {
+                    document.getElementById('taskForm').reset();
+                    loadTasks();
+                }
+            } catch (error) {
+                console.error('Error agregando tarea:', error);
+            }
+        });
+
+        // Marcar como completada
+        async function toggleTask(id, completed) {
+            try {
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ completed })
+                });
+                loadTasks();
+            } catch (error) {
+                console.error('Error actualizando tarea:', error);
+            }
+        }
+
+        // Eliminar tarea
+        async function deleteTask(id) {
+            if (confirm('¿Estás seguro de eliminar esta tarea?')) {
+                try {
+                    await fetch(`${API_URL}/${id}`, {
+                        method: 'DELETE'
+                    });
+                    loadTasks();
+                } catch (error) {
+                    console.error('Error eliminando tarea:', error);
+                }
+            }
+        }
+
+        // Inicializar
+        checkDbConnection();
+        loadTasks();
+        
+        // Actualizar cada 5 segundos
+        setInterval(checkDbConnection, 5000);
+    </script>
+</body>
+</html>
